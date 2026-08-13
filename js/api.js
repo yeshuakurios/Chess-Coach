@@ -51,33 +51,6 @@ const ClaudeAPI = (() => {
     return text.replace(/```json/gi, '').replace(/```/g, '').trim();
   }
 
-  async function extractPGNFromImage(base64, mediaType) {
-    const system = `You read screenshots of chess move-list histories (from sites like chess.com, lichess, or a scoresheet) and convert them into clean PGN movetext. Output ONLY a JSON object, no preamble, no markdown fences, matching this shape exactly:
-{
-  "pgn": "1. e4 e5 2. Nf3 ...",
-  "whiteElo": number or null,
-  "blackElo": number or null,
-  "white": string or null,
-  "black": string or null,
-  "result": "1-0" | "0-1" | "1/2-1/2" | "*"
-}
-Read every move carefully, including captures (x), checks (+), checkmate (#), castling (O-O, O-O-O), and promotions (=Q). If a move is ambiguous or unreadable, make your best legal-chess-aware guess. Do not invent moves beyond what's visible.`;
-
-    const resp = await callClaude({
-      system,
-      maxTokens: 1500,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
-          { type: 'text', text: 'Extract the PGN move list from this screenshot.' },
-        ],
-      }],
-    });
-
-    return JSON.parse(stripJsonFence(resp));
-  }
-
   const TIME_CONTROL_CONTEXT = {
     bullet: 'Bullet (under 3 minutes per side). Expect more time-pressure errors, less precise calculation, and generally lower play quality than the same player would show at longer controls — calibrate your Elo estimate accordingly, meaningfully lower than their rapid/classical level.',
     blitz: 'Blitz (3-10 minutes per side). Some time pressure, moderate calculation depth. Calibrate Elo estimate a bit below what the same player would show at rapid/classical.',
@@ -125,5 +98,5 @@ Only include entries in "moves" for moves that are inaccuracy/mistake/blunder (s
     return JSON.parse(stripJsonFence(resp));
   }
 
-  return { callClaude, extractPGNFromImage, reviewGame };
+  return { callClaude, reviewGame };
 })();

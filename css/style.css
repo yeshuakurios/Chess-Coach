@@ -166,14 +166,6 @@ label.field-label{
 .tag.inaccuracy{background:rgba(124,154,126,0.15);color:var(--sage);}
 .tag.good{background:rgba(124,154,126,0.25);color:var(--sage);}
 
-/* ---------- Upload dropzone ---------- */
-.dropzone{
-  border:2px dashed var(--line);border-radius:var(--radius);padding:40px 20px;
-  text-align:center;cursor:pointer;transition:.15s;color:var(--ivory-dim);
-}
-.dropzone:hover,.dropzone.drag{border-color:var(--brass);color:var(--ivory);}
-.dropzone img{max-width:100%;max-height:220px;margin-top:14px;border-radius:var(--radius);}
-
 /* ---------- Board ---------- */
 .board-wrap{display:inline-block;user-select:none;}
 .board{

@@ -1,6 +1,6 @@
 # Ledger — a personal chess coach
 
-A static, single-page chess coaching app. Upload a screenshot of a game's move list, get an
+A static, single-page chess coaching app. Paste in your game's PGN export, get an
 AI-written review of your mistakes, and automatically turn your real blunders into puzzles
 that build a puzzle Elo separate from your live game Elo. It tracks recurring weaknesses over
 time and always tells you the one thing to fix before your next game.
@@ -26,9 +26,10 @@ No backend, no build step — just static files, so it deploys straight to GitHu
 
 ## What it does
 
-- **New Game** — drop in a screenshot of a move list; Claude's vision reads it into PGN, you confirm
-  it, then it generates a full move-by-move review: what was good, what wasn't, and specifically
-  what you should have played instead and why.
+- **New Game** — paste in your game's PGN export (chess.com, lichess, or any other source). If you've
+  saved your username in Settings, it's matched against the export's White/Black tags to fill in your
+  color, opponent, and the result automatically. Then it generates a full move-by-move review: what
+  was good, what wasn't, and specifically what you should have played instead and why.
 - **Review** — a clickable, annotated move list next to a board, color-coded by inaccuracy /
   mistake / blunder, each with the coach's explanation.
 - **Puzzles** — every real mistake or blunder from your games becomes a puzzle (the position right
@@ -37,12 +38,11 @@ No backend, no build step — just static files, so it deploys straight to GitHu
 - **Weaknesses** — a running breakdown of mistake categories (hanging pieces, missed tactics,
   opening errors, endgame technique, etc.) across every game you've reviewed, plus a single
   "work on this before your next game" callout weighted toward your most recent games.
-- **Settings** — API key, model, live Elo, and full JSON export/import so you can back up or move
-  your data.
+- **Settings** — API key, model, your username (for auto-filling New Game from a pasted PGN), live
+  Elo, and full JSON export/import so you can back up or move your data.
 
 ## Notes
 
 - Data lives entirely in your browser's `localStorage`. Different browser or device = different
   data, unless you export/import a backup (Settings → Data).
-- The move-list screenshot reader and the coaching review both run on your own Anthropic API key,
-  so usage is billed to your own account.
+- The coaching review runs on your own Anthropic API key, so usage is billed to your own account.

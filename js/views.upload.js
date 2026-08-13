@@ -1,8 +1,6 @@
 // views.upload.js
 const UploadView = (() => {
-  let extracted = null; // { pgn, whiteElo, blackElo, white, black, result }
-  let imageDataUrl = null;
-  let pastedHeaders = {};
+  let pastedHeaders = {}; // { White, Black, Result, ... } parsed from a pasted PGN export
 
   const RESULT_VALUES = ['1-0', '0-1', '1/2-1/2', '*'];
 
@@ -33,31 +31,15 @@ const UploadView = (() => {
   }
 
   function render(root) {
-    extracted = null;
-    imageDataUrl = null;
     pastedHeaders = {};
     root.innerHTML = `
       <h1 class="page-title">New game</h1>
-      <p class="page-sub">Upload a screenshot of your move list, or paste PGN directly.</p>
+      <p class="page-sub">Paste your game's PGN export below.</p>
 
       <div class="panel">
-        <h2 class="section-title">1. Screenshot</h2>
-        <div class="dropzone" id="dropzone">
-          <div>Drop a screenshot here, or click to choose a file</div>
-          <div style="font-size:12px;margin-top:6px;">PNG or JPG of a move list / game history</div>
-          <img id="preview" style="display:none;">
-        </div>
-        <input type="file" id="fileInput" accept="image/*" style="display:none;">
-        <div style="margin-top:14px;display:flex;gap:10px;align-items:center;">
-          <button class="btn solid" id="extractBtn" disabled>Extract move list</button>
-          <span id="extractStatus" style="font-size:13px;color:var(--ivory-dim);"></span>
-        </div>
-      </div>
-
-      <div class="panel">
-        <h2 class="section-title">2. Confirm PGN</h2>
+        <h2 class="section-title">Paste PGN</h2>
         <div class="field">
-          <label class="field-label">Move text (edit if anything looks wrong)</label>
+          <label class="field-label">Paste your PGN export here (edit if anything looks wrong)</label>
           <textarea id="pgnBox" rows="6" placeholder="1. e4 e5 2. Nf3 Nc6 ..."></textarea>
         </div>
         <div class="grid-3">
@@ -95,21 +77,7 @@ const UploadView = (() => {
       </div>
     `;
 
-    const dropzone = root.querySelector('#dropzone');
-    const fileInput = root.querySelector('#fileInput');
-    const preview = root.querySelector('#preview');
-    const extractBtn = root.querySelector('#extractBtn');
-    const extractStatus = root.querySelector('#extractStatus');
     const pgnBox = root.querySelector('#pgnBox');
-
-    dropzone.addEventListener('click', () => fileInput.click());
-    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
-    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
-    dropzone.addEventListener('drop', e => {
-      e.preventDefault(); dropzone.classList.remove('drag');
-      if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
-    });
-    fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
 
     pgnBox.addEventListener('blur', () => {
       const raw = pgnBox.value;
@@ -122,40 +90,6 @@ const UploadView = (() => {
       App.toast('Detected a full PGN export — filled in details from its headers.');
     });
 
-    function handleFile(file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        imageDataUrl = reader.result;
-        preview.src = imageDataUrl;
-        preview.style.display = 'block';
-        extractBtn.disabled = false;
-      };
-      reader.readAsDataURL(file);
-    }
-
-    extractBtn.addEventListener('click', async () => {
-      const settings = Storage.getSettings();
-      if (!settings.apiKey) {
-        App.toast('Add your API key in Settings first.');
-        App.goto('settings');
-        return;
-      }
-      extractBtn.disabled = true;
-      extractStatus.innerHTML = '<span class="spinner"></span> Reading screenshot…';
-      try {
-        const [, mediaType, base64] = imageDataUrl.match(/^data:(.+);base64,(.+)$/);
-        const result = await ClaudeAPI.extractPGNFromImage(base64, mediaType);
-        extracted = result;
-        pgnBox.value = result.pgn || '';
-        if (result.result) root.querySelector('#resultSelect').value = result.result;
-        extractStatus.textContent = 'Done — review the move text below.';
-      } catch (e) {
-        console.error(e);
-        extractStatus.textContent = 'Could not read that screenshot: ' + e.message;
-      }
-      extractBtn.disabled = false;
-    });
-
     root.querySelector('#reviewBtn').addEventListener('click', async () => {
       let pgn = pgnBox.value.trim();
       if (/\[\w+\s+"/.test(pgn)) {
@@ -165,7 +99,7 @@ const UploadView = (() => {
         pgnBox.value = pgn;
         applyHeaderDetection(headers, root);
       }
-      if (!pgn) { App.toast('Add PGN or extract from a screenshot first.'); return; }
+      if (!pgn) { App.toast('Paste your game\'s PGN first.'); return; }
       const settings = Storage.getSettings();
       if (!settings.apiKey) { App.toast('Add your API key in Settings first.'); App.goto('settings'); return; }
 
@@ -198,8 +132,8 @@ const UploadView = (() => {
           id: gameId,
           date: new Date().toISOString(),
           pgn,
-          white: extracted?.white || pastedHeaders.White || (playerColor === 'w' ? 'Me' : 'Opponent'),
-          black: extracted?.black || pastedHeaders.Black || (playerColor === 'b' ? 'Me' : 'Opponent'),
+          white: pastedHeaders.White || (playerColor === 'w' ? 'Me' : 'Opponent'),
+          black: pastedHeaders.Black || (playerColor === 'b' ? 'Me' : 'Opponent'),
           playerColor,
           result,
           timeControl,
