@@ -22,6 +22,14 @@ const SettingsView = (() => {
           <label class="field-label">Model</label>
           <input type="text" id="modelInput" value="${settings.model || 'claude-sonnet-5'}">
         </div>
+        <div class="field">
+          <label class="field-label">Your chess.com / lichess username</label>
+          <input type="text" id="usernameInput" value="${settings.username || ''}" placeholder="e.g. bibleoverthinker">
+        </div>
+        <p style="font-size:13px;color:var(--ivory-dim);margin-top:-8px;">
+          When you paste a full PGN export into New Game, this is matched against its White/Black tags to
+          fill in your color, opponent, and the result automatically — no need to enter them by hand.
+        </p>
         <button class="btn solid" id="saveSettingsBtn">Save</button>
         <span id="settingsStatus" style="font-size:13px;color:var(--sage);margin-left:10px;"></span>
       </div>
@@ -52,6 +60,7 @@ const SettingsView = (() => {
       Storage.saveSettings({
         apiKey: root.querySelector('#apiKeyInput').value.trim(),
         model: root.querySelector('#modelInput').value.trim() || 'claude-sonnet-5',
+        username: root.querySelector('#usernameInput').value.trim(),
       });
       root.querySelector('#settingsStatus').textContent = 'Saved.';
       setTimeout(() => { root.querySelector('#settingsStatus').textContent = ''; }, 2000);

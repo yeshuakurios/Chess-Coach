@@ -90,7 +90,9 @@ const Storage = (() => {
 
   // ---------- Settings ----------
   function getSettings() {
-    return _get(KEYS.settings, { apiKey: '', model: 'claude-sonnet-5' });
+    const s = _get(KEYS.settings, { apiKey: '', model: 'claude-sonnet-5', username: '' });
+    if (s.username === undefined) s.username = '';
+    return s;
   }
   function saveSettings(s) { _set(KEYS.settings, s); }
 

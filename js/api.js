@@ -40,6 +40,9 @@ const ClaudeAPI = (() => {
       throw new Error(`API error ${res.status}: ${text.slice(0, 300)}`);
     }
     const data = await res.json();
+    if (data.stop_reason === 'max_tokens') {
+      throw new Error('The response was cut off before it finished (ran out of output room) — try again; longer or more eventful games may need a couple of tries.');
+    }
     const textBlocks = (data.content || []).filter(b => b.type === 'text').map(b => b.text);
     return textBlocks.join('\n');
   }
@@ -115,7 +118,7 @@ Only include entries in "moves" for moves that are inaccuracy/mistake/blunder (s
 
     const resp = await callClaude({
       system,
-      maxTokens: 4000,
+      maxTokens: 8000,
       messages: [{ role: 'user', content: `PGN:\n${pgn}\n\nTime control: ${timeControl}` }],
     });
 

@@ -17,6 +17,21 @@ const UploadView = (() => {
     return { headers, movetext };
   }
 
+  // matches the saved username against a parsed PGN's White/Black tags to fill
+  // in the player's color and result without asking for them by hand
+  function applyHeaderDetection(headers, root) {
+    if (RESULT_VALUES.includes(headers.Result)) {
+      root.querySelector('#resultSelect').value = headers.Result;
+    }
+    const username = (Storage.getSettings().username || '').trim().toLowerCase();
+    if (!username) return;
+    if ((headers.White || '').trim().toLowerCase() === username) {
+      root.querySelector('#playerColor').value = 'w';
+    } else if ((headers.Black || '').trim().toLowerCase() === username) {
+      root.querySelector('#playerColor').value = 'b';
+    }
+  }
+
   function render(root) {
     extracted = null;
     imageDataUrl = null;
@@ -103,9 +118,7 @@ const UploadView = (() => {
       if (!movetext) return;
       pastedHeaders = { ...pastedHeaders, ...headers };
       pgnBox.value = movetext;
-      if (RESULT_VALUES.includes(headers.Result)) {
-        root.querySelector('#resultSelect').value = headers.Result;
-      }
+      applyHeaderDetection(headers, root);
       App.toast('Detected a full PGN export — filled in details from its headers.');
     });
 
@@ -150,9 +163,7 @@ const UploadView = (() => {
         pastedHeaders = { ...pastedHeaders, ...headers };
         pgn = movetext;
         pgnBox.value = pgn;
-        if (RESULT_VALUES.includes(headers.Result)) {
-          root.querySelector('#resultSelect').value = headers.Result;
-        }
+        applyHeaderDetection(headers, root);
       }
       if (!pgn) { App.toast('Add PGN or extract from a screenshot first.'); return; }
       const settings = Storage.getSettings();
