@@ -91,7 +91,7 @@ Only include entries in "moves" for moves that are inaccuracy/mistake/blunder (s
 
     const resp = await callClaude({
       system,
-      maxTokens: 8000,
+      maxTokens: 12000,
       messages: [{ role: 'user', content: `PGN:\n${pgn}\n\nTime control: ${timeControl}` }],
     });
 
