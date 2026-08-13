@@ -2,31 +2,47 @@
 const ClaudeAPI = (() => {
   const ENDPOINT = 'https://api.anthropic.com/v1/messages';
 
-  async function callClaude({ system, messages, maxTokens = 2000 }) {
+  async function callClaude({ system, messages, maxTokens = 2000, timeoutMs = 120000 }) {
     const settings = Storage.getSettings();
     if (!settings.apiKey) throw new Error('No API key set. Add one in Settings.');
 
-    const res = await fetch(ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': settings.apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: settings.model || 'claude-sonnet-5',
-        max_tokens: maxTokens,
-        system,
-        messages,
-      }),
-    });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let res;
+    try {
+      res = await fetch(ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': settings.apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: settings.model || 'claude-sonnet-5',
+          max_tokens: maxTokens,
+          system,
+          messages,
+        }),
+        signal: controller.signal,
+      });
+    } catch (e) {
+      if (e.name === 'AbortError') {
+        throw new Error('The request timed out — your connection may be too slow or unstable. Try again on a stronger connection.');
+      }
+      throw new Error('Network request failed before reaching the API — check your internet connection and try again.');
+    } finally {
+      clearTimeout(timer);
+    }
 
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       throw new Error(`API error ${res.status}: ${text.slice(0, 300)}`);
     }
     const data = await res.json();
+    if (data.stop_reason === 'max_tokens') {
+      throw new Error('The response was cut off before it finished (ran out of output room) — try again; longer or more eventful games may need a couple of tries.');
+    }
     const textBlocks = (data.content || []).filter(b => b.type === 'text').map(b => b.text);
     return textBlocks.join('\n');
   }
@@ -102,7 +118,7 @@ Only include entries in "moves" for moves that are inaccuracy/mistake/blunder (s
 
     const resp = await callClaude({
       system,
-      maxTokens: 4000,
+      maxTokens: 8000,
       messages: [{ role: 'user', content: `PGN:\n${pgn}\n\nTime control: ${timeControl}` }],
     });
 

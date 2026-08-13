@@ -2,10 +2,40 @@
 const UploadView = (() => {
   let extracted = null; // { pgn, whiteElo, blackElo, white, black, result }
   let imageDataUrl = null;
+  let pastedHeaders = {};
+
+  const RESULT_VALUES = ['1-0', '0-1', '1/2-1/2', '*'];
+
+  // strips PGN header tag pairs (e.g. [White "..."]) out of pasted text like a
+  // chess.com export, returning the remaining movetext plus the parsed headers
+  function parsePgnHeaders(raw) {
+    const headers = {};
+    const movetext = raw.replace(/\[(\w+)\s+"((?:[^"\\]|\\.)*)"\]\s*/g, (_m, key, val) => {
+      headers[key] = val.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+      return '';
+    }).trim();
+    return { headers, movetext };
+  }
+
+  // matches the saved username against a parsed PGN's White/Black tags to fill
+  // in the player's color and result without asking for them by hand
+  function applyHeaderDetection(headers, root) {
+    if (RESULT_VALUES.includes(headers.Result)) {
+      root.querySelector('#resultSelect').value = headers.Result;
+    }
+    const username = (Storage.getSettings().username || '').trim().toLowerCase();
+    if (!username) return;
+    if ((headers.White || '').trim().toLowerCase() === username) {
+      root.querySelector('#playerColor').value = 'w';
+    } else if ((headers.Black || '').trim().toLowerCase() === username) {
+      root.querySelector('#playerColor').value = 'b';
+    }
+  }
 
   function render(root) {
     extracted = null;
     imageDataUrl = null;
+    pastedHeaders = {};
     root.innerHTML = `
       <h1 class="page-title">New game</h1>
       <p class="page-sub">Upload a screenshot of your move list, or paste PGN directly.</p>
@@ -81,6 +111,17 @@ const UploadView = (() => {
     });
     fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
 
+    pgnBox.addEventListener('blur', () => {
+      const raw = pgnBox.value;
+      if (!/\[\w+\s+"/.test(raw)) return;
+      const { headers, movetext } = parsePgnHeaders(raw);
+      if (!movetext) return;
+      pastedHeaders = { ...pastedHeaders, ...headers };
+      pgnBox.value = movetext;
+      applyHeaderDetection(headers, root);
+      App.toast('Detected a full PGN export — filled in details from its headers.');
+    });
+
     function handleFile(file) {
       const reader = new FileReader();
       reader.onload = () => {
@@ -116,7 +157,14 @@ const UploadView = (() => {
     });
 
     root.querySelector('#reviewBtn').addEventListener('click', async () => {
-      const pgn = pgnBox.value.trim();
+      let pgn = pgnBox.value.trim();
+      if (/\[\w+\s+"/.test(pgn)) {
+        const { headers, movetext } = parsePgnHeaders(pgn);
+        pastedHeaders = { ...pastedHeaders, ...headers };
+        pgn = movetext;
+        pgnBox.value = pgn;
+        applyHeaderDetection(headers, root);
+      }
       if (!pgn) { App.toast('Add PGN or extract from a screenshot first.'); return; }
       const settings = Storage.getSettings();
       if (!settings.apiKey) { App.toast('Add your API key in Settings first.'); App.goto('settings'); return; }
@@ -150,8 +198,8 @@ const UploadView = (() => {
           id: gameId,
           date: new Date().toISOString(),
           pgn,
-          white: extracted?.white || (playerColor === 'w' ? 'Me' : 'Opponent'),
-          black: extracted?.black || (playerColor === 'b' ? 'Me' : 'Opponent'),
+          white: extracted?.white || pastedHeaders.White || (playerColor === 'w' ? 'Me' : 'Opponent'),
+          black: extracted?.black || pastedHeaders.Black || (playerColor === 'b' ? 'Me' : 'Opponent'),
           playerColor,
           result,
           timeControl,
