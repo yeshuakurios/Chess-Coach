@@ -2,25 +2,38 @@
 const ClaudeAPI = (() => {
   const ENDPOINT = 'https://api.anthropic.com/v1/messages';
 
-  async function callClaude({ system, messages, maxTokens = 2000 }) {
+  async function callClaude({ system, messages, maxTokens = 2000, timeoutMs = 120000 }) {
     const settings = Storage.getSettings();
     if (!settings.apiKey) throw new Error('No API key set. Add one in Settings.');
 
-    const res = await fetch(ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': settings.apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: settings.model || 'claude-sonnet-5',
-        max_tokens: maxTokens,
-        system,
-        messages,
-      }),
-    });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let res;
+    try {
+      res = await fetch(ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': settings.apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: settings.model || 'claude-sonnet-5',
+          max_tokens: maxTokens,
+          system,
+          messages,
+        }),
+        signal: controller.signal,
+      });
+    } catch (e) {
+      if (e.name === 'AbortError') {
+        throw new Error('The request timed out — your connection may be too slow or unstable. Try again on a stronger connection.');
+      }
+      throw new Error('Network request failed before reaching the API — check your internet connection and try again.');
+    } finally {
+      clearTimeout(timer);
+    }
 
     if (!res.ok) {
       const text = await res.text().catch(() => '');
