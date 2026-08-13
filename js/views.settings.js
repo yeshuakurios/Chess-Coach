@@ -11,7 +11,7 @@ const SettingsView = (() => {
       <div class="panel">
         <h2 class="section-title">Anthropic API key</h2>
         <p style="font-size:13px;color:var(--ivory-dim);margin-top:-6px;">
-          Used to read your screenshots and write game reviews. Stored only in this browser's local storage —
+          Used to write your game reviews. Stored only in this browser's local storage —
           never committed to the repo, never sent anywhere except directly to Anthropic's API.
         </p>
         <div class="field">
