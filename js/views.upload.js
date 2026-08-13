@@ -11,6 +11,12 @@ const UploadView = (() => {
     '*': 'an unknown result',
   };
 
+  // mobile keyboards (iOS "Smart Punctuation") can silently swap straight
+  // quotes for curly ones while typing/editing, which breaks header parsing
+  function normalizeQuotes(text) {
+    return text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+  }
+
   // strips PGN header tag pairs (e.g. [White "..."]) out of pasted text like a
   // chess.com export, returning the remaining movetext plus the parsed headers
   function parsePgnHeaders(raw) {
@@ -30,7 +36,8 @@ const UploadView = (() => {
 
   // works out who played and the result from the pasted PGN, matching the
   // saved username against the White/Black header tags — no manual picking
-  function detectFromPgn(raw) {
+  function detectFromPgn(rawInput) {
+    const raw = normalizeQuotes(rawInput);
     const hasHeaders = /\[\w+\s+"/.test(raw);
     const { headers, movetext } = hasHeaders ? parsePgnHeaders(raw) : { headers: {}, movetext: raw.trim() };
     const result = RESULT_VALUES.includes(headers.Result) ? headers.Result : extractTrailingResult(movetext);
@@ -64,7 +71,7 @@ const UploadView = (() => {
         <h2 class="section-title">Confirm PGN</h2>
         <div class="field">
           <label class="field-label">Paste your PGN export here (edit if anything looks wrong)</label>
-          <textarea id="pgnBox" rows="6" placeholder="1. e4 e5 2. Nf3 Nc6 ..."></textarea>
+          <textarea id="pgnBox" rows="6" placeholder="1. e4 e5 2. Nf3 Nc6 ..." autocorrect="off" autocapitalize="off" autocomplete="off" spellcheck="false"></textarea>
         </div>
         <div class="field" style="max-width:240px;">
           <label class="field-label">Time control</label>
